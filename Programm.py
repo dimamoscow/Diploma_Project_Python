@@ -10,10 +10,17 @@ PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0xd, 0xa, 0x1a, 0xa]
 
 crctable_init = 0
 crctable = []
+compress_data = 0
 
-"Dictionary for IHDR Chunk"
+chunk_number = 0
+PLTE_chunk = 0
+crc_buf_start = 0
+crc_buf_end = 0
+
+name = ''
+index = PNG_SIG_LENGTH
+
 IHDR = {
-	'Data Length' : 13,
 	'Width' : '',
 	'Height' : '',
 	'Bit_depth' : '',
@@ -21,30 +28,24 @@ IHDR = {
 	'Compression_method' : 0,
     'Filter method' : 0,
     'Interlace method' : '',
-    'CRC:' : ''
+    'CRC' : ''
 }
 
-"Dictionary for PLTE Chunk"
 PLTE = {
-	'Data Length' : '',
 	'Red' : '',
 	'Green' : '',
 	'Blue' : '',
 	'CRC:' : ''
 }
 
-"Dictionary for IDAT Chunk"
 IDAT_LIST = []
 IDAT = {
-	'Data Length' : '',
 	'Position': '',
 	'Data' : '',
 	'CRC':''
 }
 
-"Dictionary for IEND Chunk"
 IEND = {
-	'Data Length' : 0,
 	'CRC' : ''
 }
 
@@ -77,42 +78,42 @@ def png_check(image_dump):
 			return 0
 	return 1
 
-def read_data_IHDR(chunk_data, begin = 16):
+def read_data_IHDR(chunk_data, index = 16):
 	
 	width = 0
-	for i in range(begin, begin + 4):
+	for i in range(index, index + 4):
 		width = width << 8 | chunk_data[i]
+	
 	IHDR['Width'] = int(width)
 	
-	begin += 4
+	index += 4
 	heigt = 0
-	for i in range(begin, begin + 4):
+	for i in range(index, index + 4):
 		heigt = heigt << 8 | chunk_data[i]	
 	IHDR['Height'] = int(heigt)
 
-	begin += 4
-	IHDR['Bit_depth'] = int(chunk_data[begin])
+	index += 4
+	IHDR['Bit_depth'] = int(chunk_data[index])
 
-	begin += 1
-	IHDR['Color_type'] = int(chunk_data[begin])
+	index += 1
+	IHDR['Color_type'] = int(chunk_data[index])
 
-	begin += 1
-	if chunk_data[begin] or chunk_data[begin + 1] != 0:
+	index += 1
+	if chunk_data[index] or chunk_data[index + 1] != 0:
 		sys.exit('IHDR Error with CM and Filter')
 	
-	IHDR['Interlace method'] = int(chunk_data[begin + 2])
+	IHDR['Interlace method'] = int(chunk_data[index + 2])
 
-	print(IHDR)
 	return IHDR
 
-def read_data_PLTE(chunk_data, length_of_data = 3):
+def read_data_PLTE(chunk_data):
 
 	if length_of_data != 3:
 		sys.exit('PLTE Error')
 
-	PLTE['Red'] = int(chunk_data[begin])
-	PLTE['Green'] = int(chunk_data[begin + 1])
-	PLTE['Blue'] = int(chunk_data[begin + 2])
+	PLTE['Red'] = int(chunk_data[index])
+	PLTE['Green'] = int(chunk_data[index + 1])
+	PLTE['Blue'] = int(chunk_data[index + 2])
 	
 	if PLTE['Red'] or PLTE['Green'] or PLTE['Blue'] < 0:
 		sys.exit('PLTE Error')
@@ -120,94 +121,14 @@ def read_data_PLTE(chunk_data, length_of_data = 3):
 	if PLTE['Red'] or PLTE['Green'] or PLTE['Blue'] > 255:
 		sys.exit('PLTE Error')	
 	
-	print(PLTE)
 	return PLTE
 
-#def read_data_IDAT(chunk_data,)
-
-
-def read_critical_chunks(image_dump, begin = PNG_SIG_LENGTH):
-	
-	if png_check(image_dump) == 0:
-		print('This picture is not PNG!')
-		sys.exit("ERROR!")
-	else: 
-		print('This is PNG picture!')
-
-	chunk_number = 0
-	name = ''
-	PLTE_chunk = 0
-	while name != 'IEND':
-		chunk_number +=1
-
-		length_of_data = 0
-		for i in range(begin, begin + LENGTH_DATA_FIELD):
-			length_of_data = length_of_data << 8 | image_dump[i]	
-
-		begin += LENGTH_DATA_FIELD
-		criticatl_reg = bin(image_dump[begin])
-		
-		if critical_reg[3] == 0:
-			name = ''
-			for i in range(begin, begin + LENGTH_NAME):
-				name += chr(image_dump[i])
-
-			crc_buf_start += begin 
-			begin += LENGTH_NAME
-
-			if name == 'IHDR':
-				if chunk_number != 1 or int(length_of_data)!=13:
-					sys.exit('IHDR Chunk error!')
-				
-				read_data_IHDR( picture_dump[begin - 1 : begin + int( length_of_data) -1], begin)
-				crc_buf_end += crc_buf_start + begin + int( length_of_data)
-				
-				IHDR['CRC'] = crc32( picture_dump[ crc_buf - 1 : crc_buf_end - 1 ])
-
-				begin += int(length_of_data)
-				pic_crc = 0
-
-				for i in range(begin, begin + LENGTH_CRC):
-					pic_crc = pic_crc << 8 | image_dump[i]
-
-				if IHDR['CRC'] != hex(pic_crc):
-					sys.exit('IHDR Chunk error! Different CRC')
-
-			elif name == 'PLTE':
-				if IHDR['Color_type'] != 3:
-					sys.exit('PNG Sig Error!')
-
-				read_data_PLTE( picture_dump[begin - 1 : begin + int( length_of_data) -1], begin)
-				crc_buf_end += crc_buf_start + begin + int( length_of_data)
-				
-				PLTE['CRC'] = crc32( picture_dump[ crc_buf - 1 : crc_buf_end - 1 ])
-
-				begin += int(length_of_data)
-				pic_crc = 0
-				for i in range(begin, begin + LENGTH_CRC):
-					pic_crc = pic_crc << 8 | image_dump[i]
-
-				if PLTE['CRC'] != hex(pic_crc):
-					sys.exit('PLTE Chunk error! Different CRC')
-				PLTE_chunk = chunk_number
-
-			elif name == 'IDAT':
-				
-			elif name == 'IEND':
-				crc_buf_end += crc_buf_start + begin
-				IEND['CRC'] = crc32( picture_dump[ crc_buf - 1 : crc_buf_end - 1 ])
-
-				pic_crc = 0
-				for i in range(begin, begin + LENGTH_CRC):
-					pic_crc = pic_crc << 8 | image_dump[i]
-
-				if IEND['CRC'] != hex(pic_crc):
-					sys.exit('IEND Chunk error! Different CRC')									
-		else:
-			begin += LENGTH_NAME + int(length_of_data) + LENGTH_CRC		
-	
-	return 'All critical chunk succsessful reading'		
-
+def read_data_IDAT(chunk_data):
+	global compress_data
+	for i in range(len(chunk_data)):
+		compress_data = compress_data << 8 | chunk_data[i]
+	IDAT['Data'] = compress_data
+	return compress_data	
 
 f = open('test3.png','rb')
 picture_dump = []
@@ -220,3 +141,124 @@ f.close()
 print('Image hexdump:')
 for i in picture_dump:
 	print('{0:02x}'.format(i), end = ' ')
+
+if png_check(picture_dump) == 0:
+	print('This picture is not PNG!')
+	sys.exit("ERROR!")
+else: 
+	print('\nThis is PNG picture!')
+
+while name != 'IEND':
+	chunk_number +=1
+
+	length_of_data = 0
+
+	print("Начало чанка :{}".format(index))
+
+
+	for i in range(index, index + LENGTH_DATA_FIELD):
+		print(hex(picture_dump[i]))
+		length_of_data = length_of_data << 8 | picture_dump[i]	
+
+	print("Длина данных: {}".format(int(length_of_data)))
+	print("Начало имени: {}".format(index + LENGTH_DATA_FIELD))
+	
+	index += LENGTH_DATA_FIELD
+	critical_reg = bin(picture_dump[index])
+
+	print(critical_reg[3])
+
+	if critical_reg[3] == '0':
+		name = ''
+		
+		for i in range(index, index + LENGTH_NAME):
+			name += chr(picture_dump[i])
+		print(name)
+
+		crc_buf_start = index 
+		index += LENGTH_NAME
+
+		if name == 'IHDR':
+			if chunk_number != 1 or int(length_of_data)!=13:
+				sys.exit('IHDR Chunk error!')
+			
+			read_data_IHDR( picture_dump, index)
+
+			crc_buf_end = index + int( length_of_data)
+			
+			print('Index crc start {}, index crc end {}'.format(crc_buf_start,crc_buf_end))
+			IHDR['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
+
+			index += int(length_of_data)
+			pic_crc = 0
+
+			for i in range(index, index + LENGTH_CRC):
+				pic_crc = pic_crc << 8 | picture_dump[i]
+
+			index += LENGTH_CRC
+			print('skdjf {}'.format(index))
+			if IHDR['CRC'] != hex(pic_crc):
+				sys.exit('IHDR Chunk error! Different CRC')
+
+			print(IHDR)
+			print('Чанк распознан!\n')
+
+		elif name == 'PLTE':
+			if IHDR['Color_type'] != 3:
+				sys.exit('PNG Sig Error!')
+
+			read_data_PLTE(picture_dump[index:index + int(length_of_data)])
+			crc_buf_end = index + int(length_of_data)
+				
+			PLTE['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
+
+			index += int(length_of_data)
+			
+			pic_crc = 0
+			for i in range(index, index + LENGTH_CRC):
+				pic_crc = pic_crc << 8 | picture_dump[i]
+
+			if PLTE['CRC'] != hex(pic_crc):
+				sys.exit('PLTE Chunk error! Different CRC')
+			index += LENGTH_CRC
+		
+		elif name == 'IDAT':
+			
+			read_data_IDAT(picture_dump[index:index + int(length_of_data)])
+			
+			crc_buf_end = index + int(length_of_data)
+			print(index)
+			print('Index crc start {}, index crc end {}'.format(crc_buf_start,crc_buf_end))
+			IDAT['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
+
+			index += int(length_of_data)
+
+			pic_crc = 0
+			for i in range(index, index + LENGTH_CRC):
+				pic_crc = pic_crc << 8 | picture_dump[i]
+
+			if IDAT['CRC'] != hex(pic_crc):
+				sys.exit('PLTE Chunk error! Different CRC')
+			index += LENGTH_CRC
+
+			print(IDAT)	
+			print('Чанк распознан! \n')
+
+
+		elif name == 'IEND':
+			crc_buf_end = index + int(length_of_data)
+			print('Index crc start {}, index crc end {}'.format(crc_buf_start,crc_buf_end))
+			
+			IEND['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
+
+			pic_crc = 0
+			for i in range(index, index + LENGTH_CRC):
+				pic_crc = pic_crc << 8 | picture_dump[i]
+
+			if IEND['CRC'] != hex(pic_crc):
+				sys.exit('IEND Chunk error! Different CRC')	
+
+			print(IEND)	
+			print('Чанк распознан!\n')							
+	else:
+		index += LENGTH_NAME + int(length_of_data) + LENGTH_CRC		
