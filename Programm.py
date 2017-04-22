@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import os
 
 PNG_SIG_LENGTH = 8
 LENGTH_DATA_FIELD = 4
@@ -21,17 +22,21 @@ name = ''
 index = PNG_SIG_LENGTH
 
 IHDR = {
+	'Name' : 'IHDR',
+	'Length' : 13,
 	'Width' : '',
 	'Height' : '',
 	'Bit_depth' : '',
 	'Color_type' : '',
 	'Compression_method' : 0,
-    'Filter method' : 0,
-    'Interlace method' : '',
+    'Filter_method' : 0,
+    'Interlace_method' : '',
     'CRC' : ''
 }
 
 PLTE = {
+	'Name' : 'PLTE',
+	'Length' : 3,
 	'Red' : '',
 	'Green' : '',
 	'Blue' : '',
@@ -40,14 +45,26 @@ PLTE = {
 
 IDAT_LIST = []
 IDAT = {
+	'Length' : '',
+	'Name' : 'IDAT',
 	'Position': '',
 	'Data' : '',
 	'CRC':''
 }
 
 IEND = {
+	'Length' : 0,
+	'Name' : 'IEND',
+	'Lengt' : 0,
 	'CRC' : ''
 }
+
+#def print_png_struct(PNG_SIG,IHDR,PLTE = None, IDAT_LIST,IEND):
+	
+def write_chunk_name(DICT):
+	global png
+	for sym in DICT['Name']:
+		png += bytes(sym, encoding = 'utf-8')
 
 def make_crc_table():
 	for i in range(0,256):
@@ -70,7 +87,7 @@ def crc32(buf):
 		crcreg = crctable[(crcreg ^ buf[i]) & 0xff]\
 		 ^ ((crcreg >> 8) & 0xffffffff)
 	crc = ~crcreg & 0xffffffff
-	return hex(crc)
+	return crc
 
 def png_check(image_dump):
 	for i in range(0, PNG_SIG_LENGTH):
@@ -102,7 +119,7 @@ def read_data_IHDR(chunk_data, index = 16):
 	if chunk_data[index] or chunk_data[index + 1] != 0:
 		sys.exit('IHDR Error with CM and Filter')
 	
-	IHDR['Interlace method'] = int(chunk_data[index + 2])
+	IHDR['Interlace_method'] = int(chunk_data[index + 2])
 
 	return IHDR
 
@@ -124,13 +141,14 @@ def read_data_PLTE(chunk_data):
 	return PLTE
 
 def read_data_IDAT(chunk_data):
-	global compress_data
+	compress_data = 0
+	IDAT['Length'] = len(chunk_data)
 	for i in range(len(chunk_data)):
 		compress_data = compress_data << 8 | chunk_data[i]
 	IDAT['Data'] = compress_data
 	return compress_data	
 
-f = open('test3.png','rb')
+f = open('test1.png','rb')
 picture_dump = []
 
 for data in f:
@@ -150,31 +168,20 @@ else:
 
 while name != 'IEND':
 	chunk_number +=1
-
 	length_of_data = 0
 
-	print("Начало чанка :{}".format(index))
-
-
 	for i in range(index, index + LENGTH_DATA_FIELD):
-		print(hex(picture_dump[i]))
 		length_of_data = length_of_data << 8 | picture_dump[i]	
 
-	print("Длина данных: {}".format(int(length_of_data)))
-	print("Начало имени: {}".format(index + LENGTH_DATA_FIELD))
-	
 	index += LENGTH_DATA_FIELD
 	critical_reg = bin(picture_dump[index])
-
-	print(critical_reg[3])
 
 	if critical_reg[3] == '0':
 		name = ''
 		
 		for i in range(index, index + LENGTH_NAME):
 			name += chr(picture_dump[i])
-		print(name)
-
+		
 		crc_buf_start = index 
 		index += LENGTH_NAME
 
@@ -186,7 +193,6 @@ while name != 'IEND':
 
 			crc_buf_end = index + int( length_of_data)
 			
-			print('Index crc start {}, index crc end {}'.format(crc_buf_start,crc_buf_end))
 			IHDR['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
 
 			index += int(length_of_data)
@@ -196,8 +202,7 @@ while name != 'IEND':
 				pic_crc = pic_crc << 8 | picture_dump[i]
 
 			index += LENGTH_CRC
-			print('skdjf {}'.format(index))
-			if IHDR['CRC'] != hex(pic_crc):
+			if IHDR['CRC'] != pic_crc:
 				sys.exit('IHDR Chunk error! Different CRC')
 
 			print(IHDR)
@@ -218,17 +223,19 @@ while name != 'IEND':
 			for i in range(index, index + LENGTH_CRC):
 				pic_crc = pic_crc << 8 | picture_dump[i]
 
-			if PLTE['CRC'] != hex(pic_crc):
+			if PLTE['CRC'] != pic_crc:
 				sys.exit('PLTE Chunk error! Different CRC')
 			index += LENGTH_CRC
+
+			print(PLTE)
+			print('Чанк распознан!\n')
 		
 		elif name == 'IDAT':
 			
 			read_data_IDAT(picture_dump[index:index + int(length_of_data)])
 			
 			crc_buf_end = index + int(length_of_data)
-			print(index)
-			print('Index crc start {}, index crc end {}'.format(crc_buf_start,crc_buf_end))
+
 			IDAT['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
 
 			index += int(length_of_data)
@@ -237,17 +244,17 @@ while name != 'IEND':
 			for i in range(index, index + LENGTH_CRC):
 				pic_crc = pic_crc << 8 | picture_dump[i]
 
-			if IDAT['CRC'] != hex(pic_crc):
+			if IDAT['CRC'] != pic_crc:
 				sys.exit('PLTE Chunk error! Different CRC')
 			index += LENGTH_CRC
 
+			IDAT_LIST.append(IDAT)
 			print(IDAT)	
 			print('Чанк распознан! \n')
 
 
 		elif name == 'IEND':
 			crc_buf_end = index + int(length_of_data)
-			print('Index crc start {}, index crc end {}'.format(crc_buf_start,crc_buf_end))
 			
 			IEND['CRC'] = crc32( picture_dump[crc_buf_start : crc_buf_end])
 
@@ -255,10 +262,49 @@ while name != 'IEND':
 			for i in range(index, index + LENGTH_CRC):
 				pic_crc = pic_crc << 8 | picture_dump[i]
 
-			if IEND['CRC'] != hex(pic_crc):
+			if IEND['CRC'] != pic_crc:
 				sys.exit('IEND Chunk error! Different CRC')	
 
 			print(IEND)	
 			print('Чанк распознан!\n')							
 	else:
 		index += LENGTH_NAME + int(length_of_data) + LENGTH_CRC		
+
+f = open("rez1.png", 'wb')
+png = b''
+
+print(IDAT_LIST)
+for i in range(len(PNG_SIG)):
+	png += PNG_SIG[i].to_bytes(1,byteorder = 'big')
+
+png += IHDR['Length'].to_bytes(4,byteorder = 'big')
+write_chunk_name(IHDR)
+png +=IHDR['Width'].to_bytes(4,byteorder = 'big')
+png +=IHDR['Height'].to_bytes(4,byteorder = 'big')
+png +=IHDR['Bit_depth'].to_bytes(1,byteorder = 'big')
+png +=IHDR['Color_type'].to_bytes(1,byteorder = 'big')
+png +=IHDR['Compression_method'].to_bytes(1,byteorder = 'big')
+png +=IHDR['Filter_method'].to_bytes(1,byteorder = 'big')
+png +=IHDR['Interlace_method'].to_bytes(1,byteorder = 'big')
+png +=IHDR['CRC'].to_bytes(4,byteorder = 'big')
+
+if IHDR['Color_type'] == 3:
+	png += PLTE['Length'].to_bytes(4,byteorder = 'big')
+	write_chunk_name(PLTE)
+	png += PLTE['Red'].to_bytes(1, byteorder = 'big')
+	png += PLTE['Green'].to_bytes(1, byteorder = 'big')
+	png += PLTE['Blue'].to_bytes(1, byteorder = 'big')
+	png += PLTE['CRC'].to_bytes(4,byteorder = 'big')
+
+for chunk in IDAT_LIST:	
+	png += chunk['Length'].to_bytes(4,byteorder = 'big')
+	write_chunk_name(chunk)
+	png += chunk['Data'].to_bytes(IDAT['Length'],byteorder = 'big')
+	png += chunk['CRC'].to_bytes(4,byteorder = 'big')
+
+png +=IEND['Length'].to_bytes(4,byteorder = 'big')
+write_chunk_name(IEND)
+png += IEND['CRC'].to_bytes(4,byteorder = 'big')
+
+f.write(png)
+f .close()
