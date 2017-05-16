@@ -33,9 +33,9 @@ IHDR = {
 	'Bit_depth' : '',
 	'Color_type' : '',
 	'Compression_method' : 0,
-    'Filter_method' : 0,
-    'Interlace_method' : '',
-    'CRC' : ''
+	'Filter_method' : 0,
+	'Interlace_method' : '',
+	'CRC' : ''
 }
 
 PLTE = {
