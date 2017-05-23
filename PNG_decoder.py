@@ -3,7 +3,6 @@
 
 import sys
 import os
-import time
 import zlib
 
 if __name__ != "__main__":
@@ -28,23 +27,10 @@ buf_compress_data = []
 
 PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0xd, 0xa, 0x1a, 0xa]
 
-IHDR = {
-	'Length' : 13,
-	'Width' : '',
-	'Height' : '',
-	'Bit_depth' : '',
-	'Color_type' : '',
-	'Compression_method' : 0,
-	'Filter_method' : 0,
-	'Interlace_method' : '',
-	'CRC' : ''
-}
+IHDR = dict(Length = 13, width = 0, Height = 0, Bit_depth = 0, Color_type = 0, \
+	Compression_method = 0, Filter_method = 0, Interlace_method = 0, CRC = 0 )
 
-PLTE = {
-	'Length' : 0,
-	'Data' : [],
-	'CRC:' : ''
-}
+PLTE = dict(Length = 0, Data = [], CRC = 0)
 
 def print_critical_chunk_struct(name_of_chunk):
 	if name_of_chunk == IHDR:
@@ -188,6 +174,7 @@ for i in range(0, PNG_SIG_LENGTH):
 print('This is picture {} is PNG'.format(sys.argv[1]))
 
 while name != 'IEND':
+
 	chunk_number += 1
 	length_of_data = 0
 
@@ -197,12 +184,11 @@ while name != 'IEND':
 	index += LENGTH_DATA_FIELD
 	critical_reg = bin(picture_dump[index])
 
+	name = ''
+	for i in range(index, index + LENGTH_NAME):
+		name += chr(picture_dump[i])
 	if critical_reg[3] == '0':
-		name = ''
-		
-		for i in range(index, index + LENGTH_NAME):
-			name += chr(picture_dump[i])
-		
+				
 		crc_buf_start = index 
 		index += LENGTH_NAME
 
@@ -265,9 +251,9 @@ while name != 'IEND':
 
 			if CRC != pic_crc:
 				sys.exit('IEND Chunk error! Different CRC')	
-			print_critical_chunk_struct('IEND')							
+			print_critical_chunk_struct('IEND')					
 	else:
-		index += LENGTH_NAME + int(length_of_data) + LENGTH_CRC		
+		index += LENGTH_NAME + int(length_of_data) + LENGTH_CRC
 
 length_idat = len(buf_compress_data)
 cd = 0
@@ -278,7 +264,9 @@ cd = cd.to_bytes(length_idat, byteorder = 'big')
 
 decompressor = zlib.decompressobj()
 DecomressData = decompressor.decompress(cd)
+print('Start compression:', end = ' ')
 CompressData = zlib.compress(DecomressData, 9)
+print('Done')
 length_idat = len(CompressData)
 
 OutFile = open(sys.argv[2], 'wb')
@@ -339,3 +327,6 @@ png += CRC.to_bytes(4, byteorder = 'big')
 
 OutFile.write(png)
 OutFile.close()
+
+__author__ = 'Motsik Dmitry, MAI 2017'
+__version__ = '0.1'
