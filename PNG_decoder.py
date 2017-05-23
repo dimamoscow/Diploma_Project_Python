@@ -19,7 +19,6 @@ crctable = []
 compress_data = 0
 
 chunk_number = 0
-PLTE_chunk = 0
 crc_buf_start = 0
 crc_buf_end = 0
 name = ''
