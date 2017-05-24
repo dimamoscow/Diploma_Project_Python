@@ -35,22 +35,22 @@ def print_critical_chunk_struct(name_of_chunk):
 	if name_of_chunk == IHDR:
 		print('\nIHDR recongnizer!\nIHDR info:')
 		print('\tData length: {}'.format(IHDR['Length']))
-		print('\tWidth: {0}'.format(IHDR['Width']))
-		print('\tHeight: {0}'.format(IHDR['Height']))
-		print('\tBit depth : {0}'.format(IHDR['Bit_depth']))
+		print('\tWidth: {}'.format(IHDR['Width']))
+		print('\tHeight: {}'.format(IHDR['Height']))
+		print('\tBit depth : {}'.format(IHDR['Bit_depth']))
 		
 		if int(IHDR['Color_type']) == 0:
-			print('\tColor type : {0}(Greyscale)'.format(IHDR['Color_type']))
+			print('\tColor type : {}(Greyscale)'.format(IHDR['Color_type']))
 		elif int(IHDR['Color_type']) == 2:
-			print('\tColor type : {0}(Truecolour)'.format(IHDR['Color_type']))
+			print('\tColor type : {}(Truecolour)'.format(IHDR['Color_type']))
 		elif int(IHDR['Color_type']) == 3:
-			print('\tColor type : {0}(Indexed-color)'.format(IHDR['Color_type']))
+			print('\tColor type : {}(Indexed-color)'.format(IHDR['Color_type']))
 		elif int(IHDR['Color_type']) == 4:
-			print('\tColor type : {0}(Greyscale with alpha)'.format(IHDR['Color_type']))
+			print('\tColor type : {}(Greyscale with alpha)'.format(IHDR['Color_type']))
 		elif int(IHDR['Color_type']) == 6:
-			print('\tColor type : {0}(Truecolour with alpha)'.format(IHDR['Color_type']))
+			print('\tColor type : {}(Truecolour with alpha)'.format(IHDR['Color_type']))
 		
-		print('\tCompression method: {0}(deflate/inflate compression with a sliding window)'\
+		print('\tCompression method: {}(deflate/inflate compression with a sliding window)'\
 			.format(IHDR['Compression_method']))
 		print('\tFilter method: {}(adaptive filtering)'.format(IHDR['Filter_method']))
 
